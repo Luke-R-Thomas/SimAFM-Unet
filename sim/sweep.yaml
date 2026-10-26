@@ -8,7 +8,7 @@ proteins: [6j6j, 2F1C, 1AP9, 6LSC, 2ABM, 2YXJ, 1BL8, 2OAR, 2OMF, 1KZU, 2HHB, 1EM
 # (one value for everything).
 clean_sweep:
   tip_radius: [0.1, 0.5, 1.0]
-  # extra rotation applied to every frame (see load_sim_protien_data.py):
+  # extra rotation applied to every frame (see sim/simulate.py):
   #   fixed     same orientation every frame, jitter only (LAFM evaluation movies)
   #   spin<D>   in-plane rotation within +/- D degrees, e.g. spin30
   #   tilt<D>   tilted up to D degrees from the natural orientation, any in-plane angle, e.g. tilt30

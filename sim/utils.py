@@ -1,7 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct  9 15:02:44 2026
+sim/utils.py  (was tools.py)
+
+Small helpers shared by the simulation, the U-Net and the analysis scripts:
+- clean_name, noise_name : the filenames for each stack, e.g.
+                           6j6j_tr05_ca10_tilt30_exact(_n05)
+- name_seed              : turns a filename into a fixed random seed
+- add_noise              : the ONE place Gaussian noise is added
+- save_tiff              : writes a stack as a float32 tiff
+- show, plot_clean, plot_noisy : quick looks at single images
+
+Do NOT change the naming or seed functions: every seed (jitter, rotations,
+noise) comes from the filenames, so changing them changes all the data.
 
 @author: lukethomas
 """
@@ -12,13 +23,14 @@ from pathlib import Path
 import tifffile
 import zlib
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).parent          # this file's folder (sim/)
+ROOT = HERE.parent                    # the SimAFM-main folder, where AFM_cmap.npy is
 
 
 
 def show(img,pix_per_nm,title, vmin, vmax, cmap_path, figuresize):
     
-    AFM = ListedColormap(np.load(HERE / cmap_path))
+    AFM = ListedColormap(np.load(ROOT / cmap_path))
     extent = [0, img.shape[1] / pix_per_nm, img.shape[0] / pix_per_nm, 0]
     
     plt.figure(figsize = figuresize)
@@ -97,7 +109,7 @@ def add_noise(clean, noise, seed):
     seed stored in data_table.csv (see export_noisy.py).
 
     This is the ONE place noise is made, used by both the dataset
-    (afm_dataset.py) and the exporter, so they can never disagree.
+    (unet/dataset.py) and the exporter, so they can never disagree.
     """
     rng = np.random.default_rng(seed)
     noisy = clean + rng.standard_normal(np.shape(clean)) * noise

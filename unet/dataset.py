@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-afm_dataset.py
+unet/dataset.py  (was afm_dataset.py)
 
-Turns the output of sweep.py (data/data_table.csv plus the clean/ and noise/
-tiff stacks) into (noisy, clean) image pairs that PyTorch can train on.
+Turns the output of sim/sweep.py (data/data_table.csv plus the clean tiff
+stacks in data/clean/) into (noisy, clean) image pairs that PyTorch can
+train on. The noise is not stored on disk; it is rebuilt here from each
+row's noise_seed with sim.utils.add_noise.
 
 One training sample = one frame: a noisy 64x64 image (input) and the clean
 64x64 image it came from (target). Each row of data_table.csv is one noisy
@@ -14,6 +16,10 @@ Splitting into train / val / test (split_table_ratio) is done on whole
 groups, never on single frames: frames of one stack differ only by a 0.1 nm
 jitter, so a frame-level split would put near copies of training images in
 the test set.
+
+This file only holds functions; it is imported by train.py and
+analysis/make_figures.py (which put the SimAFM-main folder on the path
+first, so `from sim.utils import ...` below can be found).
 
 @author: lukethomas
 """
@@ -26,7 +32,7 @@ import tifffile
 import torch
 from torch.utils.data import Dataset
 
-from tools import add_noise
+from sim.utils import add_noise
 
 
 def load_table(data_root):
@@ -109,7 +115,7 @@ class AFMDenoiseDataset(Dataset):
             height information, so outputs convert straight back to nm.
     fresh_noise : how the noise is made.
             False (validation / test): the FIXED noise for each row, rebuilt
-            from its noise_seed with tools.add_noise. Same images every run,
+            from its noise_seed with sim.utils.add_noise. Same images every run,
             so scores are repeatable, and identical to what export_noisy.py
             saves if you want to look at them.
             True (training): draw NEW Gaussian noise with the same rms each

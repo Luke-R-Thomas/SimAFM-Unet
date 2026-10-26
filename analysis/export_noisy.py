@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-export_noisy.py
+analysis/export_noisy.py
 
 Rebuilds noisy stacks from the clean tiffs + the seeds in data_table.csv and,
 if you ask, saves them as tiffs and/or plots them. Training does NOT need
 this; it is for looking at the data or taking noisy images into NanoLocz.
 
-Because the noise comes from a fixed seed (tools.add_noise), an exported
+Because the noise comes from a fixed seed (sim.utils.add_noise), an exported
 stack is exactly what the U-Net validated / tested on.
 
-Examples
+Run: edit the call at the bottom and press F5, or
+`python analysis/export_noisy.py` from any folder.
+
+Examples (in the Spyder console, after running this file once)
 --------
-    from export_noisy import export_noisy
 
     # look at one condition, don't save anything
     export_noisy(protein="6j6j", tip_radius=0.5, cone_angle=1.0, noise=0.5,
@@ -23,29 +25,33 @@ Examples
 
 @author: lukethomas
 """
+import sys
 from pathlib import Path
 
 import pandas as pd
 import tifffile
 import yaml
 
-from tools import add_noise, save_tiff, plot_noisy
+HERE = Path(__file__).parent          # this script's folder (analysis/)
+ROOT = HERE.parent                    # the SimAFM-main folder
+sys.path.append(str(ROOT))            # so `from sim.utils import ...` works from any folder
 
-HERE = Path(__file__).parent
-ROOT = HERE / "data"
+from sim.utils import add_noise, save_tiff, plot_noisy
+
+DATA = ROOT / "data"
 
 
 def export_noisy(protein=None, tip_radius=None, cone_angle=None, noise=None,
                  orientation=None,
-                 save=True, show=False, frame=0, out_dir=ROOT / "noise"):
+                 save=True, show=False, frame=0, out_dir=DATA / "noise"):
     """
     Any filter left as None means "all values". Returns {noise_name: stack}.
 
     save  : write <out_dir>/<protein>/<noise_name>.tif
     show  : plot one frame (`frame`) of each stack
     """
-    table = pd.read_csv(ROOT / "data_table.csv")
-    with open(HERE / "sweep.yaml") as f:
+    table = pd.read_csv(DATA / "data_table.csv")
+    with open(ROOT / "sim" / "sweep.yaml") as f:
         pix_per_nm = yaml.safe_load(f)["fixed"]["pix_per_nm"]
 
     # keep only rows matching the filters that were given
@@ -59,7 +65,7 @@ def export_noisy(protein=None, tip_radius=None, cone_angle=None, noise=None,
 
     stacks = {}
     for _, row in table.iterrows():
-        clean = tifffile.imread(ROOT / row["clean_path"])
+        clean = tifffile.imread(DATA / row["clean_path"])
         noisy = add_noise(clean, row["noise"], row["noise_seed"])
         stacks[row["noise_name"]] = noisy
 

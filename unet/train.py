@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-train_unet.py
+unet/train.py  (was train_unet.py)
 
-Trains the U-Net (unet.py) to map noisy SimAFM images to clean ones, then
+Trains the U-Net (model.py) to map noisy SimAFM images to clean ones, then
 scores it against the noisy input and a Gaussian filter (the filter the LAFM
 pipeline currently uses) on a held-out test set (70/15/15 train/val/test).
 
-Run from the SimAFM-main folder: `python train_unet.py` (or F5 in Spyder).
+Run: F5 in Spyder, or `python unet/train.py` from any folder.
 Edit the CONFIG block below to change the split, model size etc.
+
+This script trains and evaluates only; it makes NO figures. All plots are
+made afterwards by analysis/make_figures.py from the files saved here, so
+you can restyle figures without retraining.
 
 Outputs (in results/<run_name>/):
 - best_model.pt    : weights + the settings needed to reload them
+- history.csv      : one row per validation check (losses, RMSE in nm,
+                     learning rate, best so far); used for the loss curve
 - split.csv        : which rows went to train / val / test
 - metrics.csv      : TEST-set RMSE (nm) per tip radius / cone angle / noise
-- loss_curve.png   : training and validation loss per epoch
-- examples.png     : noisy | Gaussian | U-Net | clean, one row per noise level
+- config.json      : the CONFIG used, plus the scale and data folder
 
 Target choice: this is option 1 from the plan, the target is the noise-free
 image with the SAME tip (clean_path in data_table.csv). For option 2
@@ -27,22 +32,24 @@ row is paired with.
 
 from pathlib import Path
 import json
+import os
+import sys
 import time
 
 import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use("Agg")           # save figures to file, no pop-up windows
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
 import tifffile
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from scipy.ndimage import gaussian_filter
 
-from unet import UNet
-from afm_dataset import load_table, split_table_ratio, AFMDenoiseDataset
+HERE = Path(__file__).parent          # this script's folder (unet/)
+ROOT = HERE.parent                    # the SimAFM-main folder
+sys.path.append(str(ROOT))            # so `from unet.model import ...` works from any folder
+
+from unet.model import UNet
+from unet.dataset import load_table, split_table_ratio, AFMDenoiseDataset
 
 
 # =============================================================================
@@ -76,17 +83,16 @@ CONFIG = {
     "residual": True,       # predict the noise and subtract it (see unet.py)
 
     # Training
-    "epochs": 100,
+    "epochs": 50,
     "batch_size": 16,
     "lr": 1e-3,             # Adam learning rate
     "fresh_noise": True,    # new noise every epoch (see afm_dataset.py)
     "augment": True,        # random flips / 90 degree rotations
     "seed": 0,
-    "val_every": 5,         # epochs between validation checks
+    "val_every": 1,         # epochs between validation checks
 }
 
-HERE = Path(__file__).parent
-DATA_ROOT = HERE / "data"
+DATA_ROOT = ROOT / "data"
 
 
 # =============================================================================
@@ -102,12 +108,12 @@ def get_device():
     return torch.device("cpu")
 
 
-def max_clean_height(table):
+def max_clean_height(table, data_root=DATA_ROOT):
     """Largest clean height (nm) in these rows; used as the scale so the
     training images sit roughly in 0-1. Taken from TRAINING rows only, so no
     information about the validation set leaks into training."""
     paths = table["clean_path"].unique()
-    return float(max(tifffile.imread(DATA_ROOT / p).max() for p in paths))
+    return float(max(tifffile.imread(data_root / p).max() for p in paths))
 
 
 @torch.no_grad()
@@ -154,8 +160,14 @@ def best_gaussian(noisy, clean, sigmas=(0.5, 0.75, 1.0, 1.5, 2.0, 3.0)):
 # =============================================================================
 # Main
 # =============================================================================
-def main(cfg=CONFIG):
-    OUT_DIR = HERE / "results" / cfg["run_name"]
+def main(cfg=CONFIG, data_root=DATA_ROOT):
+    """
+    cfg       : the settings (CONFIG above)
+    data_root : folder holding data_table.csv and clean/. Normally data/;
+                another folder lets you test on a small throwaway sweep.
+    """
+    data_root = Path(data_root)
+    OUT_DIR = ROOT / "results" / cfg["run_name"]
     torch.manual_seed(cfg["seed"])
     np.random.seed(cfg["seed"])
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -163,7 +175,7 @@ def main(cfg=CONFIG):
     print(f"Device: {device}")
 
     # ---- Data ----
-    table = load_table(DATA_ROOT)
+    table = load_table(data_root)
     train_tab, val_tab, test_tab = split_table_ratio(
         table, cfg["group_by"], cfg["ratios"], seed=cfg["seed"])
 
@@ -186,15 +198,15 @@ def main(cfg=CONFIG):
     for name, t in [("train", train_tab), ("val", val_tab), ("test", test_tab)]:
         print(f"{name:5s}: {len(t) / len(table):5.1%} of rows  "
               f"{sorted(t[cfg['group_by']].unique())}")
-    scale = max_clean_height(train_tab)
+    scale = max_clean_height(train_tab, data_root)
     print(f"scale {scale:.3f} nm")
 
-    train_ds = AFMDenoiseDataset(train_tab, DATA_ROOT, scale,
+    train_ds = AFMDenoiseDataset(train_tab, data_root, scale,
                                  fresh_noise=cfg["fresh_noise"],
                                  augment=cfg["augment"], seed=cfg["seed"])
     # validation: the saved noisy files, no augmentation -> fixed, repeatable
-    val_ds = AFMDenoiseDataset(val_tab, DATA_ROOT, scale)
-    test_ds = AFMDenoiseDataset(test_tab, DATA_ROOT, scale)
+    val_ds = AFMDenoiseDataset(val_tab, data_root, scale)
+    test_ds = AFMDenoiseDataset(test_tab, data_root, scale)
     print(f"Frames: train {len(train_ds)}, val {len(val_ds)}, test {len(test_ds)}")
 
     # DataLoader batches the samples and shuffles training order each epoch.
@@ -226,12 +238,16 @@ def main(cfg=CONFIG):
                                                            T_max=cfg["epochs"])
 
     # ---- Training loop ----
-    history = {"epoch": [], "train_loss": [], "val_loss": []}
+    # history gets one row per validation check and is saved to history.csv
+    # every time, so the loss curve can be plotted (even mid-training) by
+    # analysis/make_figures.py without retraining
+    history = []
     best_val = np.inf
     t0 = time.time()
 
     for epoch in range(1, cfg["epochs"] + 1):
         model.train()                   # training mode
+        lr = optimiser.param_groups[0]["lr"]   # learning rate used this epoch
         running = 0.0
         for noisy, clean, _ in train_loader:
             noisy, clean = noisy.to(device), clean.to(device)
@@ -251,16 +267,28 @@ def main(cfg=CONFIG):
             with torch.no_grad():               # no gradients needed to score
                 val_loss = sum(loss_fn(model(n.to(device)), c.to(device)).item() * len(n)
                                for n, c, _ in val_loader) / len(val_ds)
-            history["epoch"].append(epoch)
-            history["train_loss"].append(train_loss)
-            history["val_loss"].append(val_loss)
 
             # keep the weights from the epoch with the lowest val loss
-            if val_loss < best_val:
+            is_best = val_loss < best_val
+            if is_best:
                 best_val = val_loss
                 torch.save({"state_dict": model.state_dict(),
                             "config": cfg, "scale": scale}, OUT_DIR / "best_model.pt")
-            # losses are in scaled units; sqrt * scale gives an RMSE in nm
+
+            # losses are MSE in scaled units; sqrt(MSE) * scale is an RMSE in nm.
+            # (train_loss is on fresh noise + augmentation, averaged over the
+            # epoch while the weights were changing, so it is only a rough
+            # guide; val_loss is on fixed noise with the end-of-epoch weights.)
+            history.append({
+                "epoch": epoch,
+                "train_loss": train_loss,
+                "val_loss": val_loss,
+                "train_rmse_nm": np.sqrt(train_loss) * scale,
+                "val_rmse_nm": np.sqrt(val_loss) * scale,
+                "lr": lr,
+                "is_best": is_best,
+            })
+            pd.DataFrame(history).to_csv(OUT_DIR / "history.csv", index=False)
             print(f"epoch {epoch:4d}  train {train_loss:.5f}  val {val_loss:.5f}  "
                   f"(val RMSE {np.sqrt(val_loss) * scale:.3f} nm)  "
                   f"{time.time() - t0:.0f}s")
@@ -290,37 +318,15 @@ def main(cfg=CONFIG):
     metrics["unet_vs_gaussian_%"] = 100 * (1 - metrics["rmse_unet_nm"]
                                            / metrics["rmse_gaussian_nm"])
     metrics.to_csv(OUT_DIR / "metrics.csv", index=False)
+    # data_root is saved (relative to SimAFM-main, e.g. "data") so
+    # make_figures.py knows where the clean stacks for this run are
+    data_root_str = os.path.relpath(data_root, ROOT)
     with open(OUT_DIR / "config.json", "w") as f:
-        json.dump({**cfg, "scale_nm": scale}, f, indent=2)
+        json.dump({**cfg, "scale_nm": scale, "data_root": data_root_str}, f, indent=2)
     pd.set_option("display.width", 200)
     print("\nTest RMSE (nm), lower is better:")
     print(metrics.round(4).to_string(index=False))
 
-    # ---- Figures ----
-    plt.figure(figsize=(6, 4))
-    plt.semilogy(history["epoch"], history["train_loss"], label="train")
-    plt.semilogy(history["epoch"], history["val_loss"], label="val")
-    plt.xlabel("epoch"); plt.ylabel("MSE (scaled units)")
-    plt.legend(); plt.tight_layout()
-    plt.savefig(OUT_DIR / "loss_curve.png", dpi=150); plt.close()
-
-    try:
-        cmap = ListedColormap(np.load(HERE / "AFM_cmap.npy"))
-    except Exception:
-        cmap = "afmhot"
-    levels = sorted(meta["noise"].unique())
-    fig, axes = plt.subplots(len(levels), 4, figsize=(12, 3 * len(levels)),
-                             squeeze=False)
-    for r, lvl in enumerate(levels):
-        i = meta.index[meta["noise"] == lvl][0]      # first frame at this level
-        gauss, _ = best_gaussian(noisy[i:i + 1], clean[i:i + 1])
-        panels = [noisy[i], gauss[0], pred[i], clean[i]]
-        titles = [f"noisy ({lvl} nm)", "best Gaussian", "U-Net", "clean"]
-        for ax, im, t in zip(axes[r], panels, titles):
-            ax.imshow(im, cmap=cmap, vmin=clean[i].min(), vmax=clean[i].max())
-            ax.set_title(t); ax.axis("off")
-    plt.tight_layout()
-    plt.savefig(OUT_DIR / "examples.png", dpi=150); plt.close()
     print(f"\nSaved results to {OUT_DIR}")
     return model, metrics
 

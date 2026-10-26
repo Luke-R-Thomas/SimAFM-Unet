@@ -1,23 +1,34 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sun Oct 11 15:30:19 2026
+analysis/inspect_data.py  (was tester.py)
+
+Quick visual check of one clean stack and its noisy versions: plots a few
+clean frames, then each noise level, and checks the added noise has the
+rms it should (residual std / sigma close to 1).
+
+Run: choose the settings below and press F5, or
+`python analysis/inspect_data.py` from any folder.
 
 @author: lukethomas
 """
 
 import itertools
+import sys
 from pathlib import Path
-from tools import plot_clean, plot_noisy, clean_name, noise_name, name_seed, add_noise
 import numpy as np
 import tifffile
 import yaml
 
+HERE = Path(__file__).parent          # this script's folder (analysis/)
+ROOT = HERE.parent                    # the SimAFM-main folder
+sys.path.append(str(ROOT))            # so `from sim.utils import ...` works from any folder
 
-HERE = Path(__file__).parent
-ROOT = HERE / "data"
+from sim.utils import plot_clean, plot_noisy, clean_name, noise_name, name_seed, add_noise
 
-with open(HERE / "sweep.yaml") as f:
+DATA = ROOT / "data"
+
+with open(ROOT / "sim" / "sweep.yaml") as f:
     cfg = yaml.safe_load(f)
 
 def expand(sweep):
@@ -29,7 +40,7 @@ def expand(sweep):
 protein = "6j6j"
 combo_idx = 3          # which clean combination to inspect
 frame = 0              # which frame to compare clean vs noisy
-cmap = "AFM_cmap.npy"
+cmap = "AFM_cmap.npy"   # in the SimAFM-main folder
 ppn = cfg["fixed"]["pix_per_nm"]
 
 clean_combos = expand(cfg["clean_sweep"])
@@ -47,7 +58,7 @@ print(f"\ninspecting {protein} {clean_params}")
 
 # ---- load clean ----
 renderer = cfg["fixed"].get("renderer", "exact")
-clean_path = ROOT / "clean" / protein / f"{clean_name(protein, **clean_params, renderer=renderer)}.tif"
+clean_path = DATA / "clean" / protein / f"{clean_name(protein, **clean_params, renderer=renderer)}.tif"
 clean = tifffile.imread(clean_path)
 print(f"clean: shape {clean.shape}, dtype {clean.dtype}, "
       f"height {clean.min():.3f} to {clean.max():.3f}")

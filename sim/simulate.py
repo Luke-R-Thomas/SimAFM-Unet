@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-load_sim_protien_data.py
+sim/simulate.py  (was load_sim_protien_data.py)
 
 Simulates AFM height images of a protein from its PDB structure.
+This file only holds functions; sweep.py calls generate_data for every
+protein / tip / orientation combination.
 
 Pipeline for one frame
 ----------------------
-1. load_coords      : atom positions (nm) from pdb_files/<PDB_ID>.pdb
+1. load_coords      : atom positions (nm) from data/pdb/<PDB_ID>.pdb
 2. base_orient      : the "natural" orientation (theta_x/y/z, e.g. 90 deg
                       about x), as in the original SimAFM
 3. sample_rotation  : an EXTRA random rotation, set by `orientation`:
@@ -32,23 +34,24 @@ Original SimAFM code: pymte, 2023. Restructured, vectorised and extended.
 import re
 from pathlib import Path
 from time import time
-import warnings
 
 import mdtraj as md
 import numpy as np
 import pandas as pd
 from scipy.spatial.transform import Rotation
 
-# folder this file lives in, so pdb_files/ is found wherever you run from
+# folder this file lives in (sim/), and the SimAFM-main folder above it,
+# so data/pdb/ is found wherever you run from
 HERE = Path(__file__).parent
+ROOT = HERE.parent
 
 
 # =============================================================================
 # Coordinates and orientation
 # =============================================================================
 def load_coords(PDB_ID):
-    """Atom coordinates (N, 3) in nm from pdb_files/<PDB_ID>.pdb."""
-    pdb_file = str(HERE / 'pdb_files' / f'{PDB_ID}.pdb')
+    """Atom coordinates (N, 3) in nm from data/pdb/<PDB_ID>.pdb."""
+    pdb_file = str(ROOT / 'data' / 'pdb' / f'{PDB_ID}.pdb')
     start = time()
     protein = md.load(pdb_file)          # mdtraj gives positions in nm
     coords = protein.xyz[0, :, :]        # given as 1xNx3; only want Nx3
@@ -298,7 +301,9 @@ def generate_data(PDB_ID, crc_seed, cone_angle, tip_radius, pix_per_nm, n_frames
                                      natural orientation
              jitter_x_nm, jitter_y_nm : the applied jitter
              clipped               : True if the molecule touched the canvas
-                                     edge (canvas too small for this view)
+                                     edge (canvas too small for this view).
+                                     sweep.py prints one summary of these at
+                                     the end instead of warning per stack.
     """
     rng = np.random.default_rng(crc_seed)
 
@@ -339,9 +344,4 @@ def generate_data(PDB_ID, crc_seed, cone_angle, tip_radius, pix_per_nm, n_frames
         })
 
     frames = pd.DataFrame(records)
-    n_clip = int(frames['clipped'].sum())
-    if n_clip:
-        warnings.warn(f"{PDB_ID} tr={tip_radius} ca={cone_angle} {orientation}: "
-                      f"{n_clip}/{n_frames} frames touch the {size}x{size} canvas "
-                      f"edge, so part of the molecule is cut off. Use a bigger canvas.")
     return stack, frames

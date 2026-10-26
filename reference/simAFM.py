@@ -4,11 +4,14 @@ Created on Mon Oct 30 12:42:10 2023
 
 @author: pymte
 
+reference/simAFM.py
+
 REFERENCE ONLY: the original single-image SimAFM script, kept for comparison.
 It is not used by the pipeline. The same physics lives in
-load_sim_protien_data.py (prepare_coords / make_canvas / render_frame), which
-sweep.py calls. Note this script runs everything at the top level, so don't
-import it from other files.
+sim/simulate.py (prepare_coords / make_canvas / render_frame), which
+sim/sweep.py calls. Note this script runs everything at the top level, so don't
+import it from other files. Its paths (pdb_files/, AFM_cmap.npy) are the old
+ones, left as they were; it would need them next to it to run.
 """
 
 import mdtraj as md
