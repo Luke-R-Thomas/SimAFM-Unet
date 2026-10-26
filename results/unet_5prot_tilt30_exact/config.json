@@ -1,0 +1,23 @@
+{
+  "run_name": "unet_5prot_tilt30_exact",
+  "group_by": "protein",
+  "ratios": [
+    0.7,
+    0.15,
+    0.15
+  ],
+  "train_orientations": null,
+  "eval_orientations": [
+    "fixed"
+  ],
+  "base_channels": 32,
+  "residual": true,
+  "epochs": 100,
+  "batch_size": 16,
+  "lr": 0.001,
+  "fresh_noise": true,
+  "augment": true,
+  "seed": 0,
+  "val_every": 5,
+  "scale_nm": 3.3128867149353027
+}

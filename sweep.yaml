@@ -1,0 +1,26 @@
+# 15 proteins. All except 6j6j and 2F1C are RCSB "biological assembly 1"
+# files (multi-model assemblies merged into one model).
+# membrane: 2F1C 1AP9 6LSC 2ABM 1BL8 2OAR 2OMF 1KZU | soluble: 6j6j 2YXJ 2HHB 1EMA 1CLL 1LYZ 1IGT
+# cropped at the 64x64 edge in the fixed view: 6LSC, 2OAR, 1IGT
+proteins: [6j6j, 2F1C, 1AP9, 6LSC, 2ABM, 2YXJ, 1BL8, 2OAR, 2OMF, 1KZU, 2HHB, 1EMA, 1CLL, 1LYZ, 1IGT]
+
+# Any simulation parameter can go here (a list = swept) or under `fixed`
+# (one value for everything).
+clean_sweep:
+  tip_radius: [0.1, 0.5, 1.0]
+  # extra rotation applied to every frame (see load_sim_protien_data.py):
+  #   fixed     same orientation every frame, jitter only (LAFM evaluation movies)
+  #   spin<D>   in-plane rotation within +/- D degrees, e.g. spin30
+  #   tilt<D>   tilted up to D degrees from the natural orientation, any in-plane angle, e.g. tilt30
+  #   random    any orientation (uniform over the sphere)
+  orientation: [fixed, tilt30]
+
+noise_sweep:
+  noise: [0.1, 0.25, 0.5, 1.0]
+
+fixed:
+  pix_per_nm: 6.25
+  n_frames: 50
+  cone_angle: 8.0     # tip cone half-angle (degrees), held constant (supervisor's suggestion)
+  renderer: exact     # exact (fixed sub-pixel placement) or original (SimAFM as given)
+  z_thresh: 0.5       # fraction of the height range removed from the bottom (0 = keep all)

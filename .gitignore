@@ -1,0 +1,4 @@
+__pycache__/
+.DS_Store
+data/clean/
+results/*/best_model.pt
