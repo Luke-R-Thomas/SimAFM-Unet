@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['sweep.yaml', 'sweep.py', 'train_unet.py', 'afm_dataset.py', 'export_noisy.py', 'load_sim_protien_data.py', 'simAFM.py', 'tester.py']
+recent_files = []
 
 [main]
 version = 0.2.0
