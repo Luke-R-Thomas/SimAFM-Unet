@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-analysis/export_noisy.py
+unet/export_noisy.py
 
 Rebuilds noisy stacks from the clean tiffs + the seeds in data_table.csv and,
 if you ask, saves them as tiffs and/or plots them. Training does NOT need
@@ -11,7 +11,7 @@ Because the noise comes from a fixed seed (sim.utils.add_noise), an exported
 stack is exactly what the U-Net validated / tested on.
 
 Run: edit the call at the bottom and press F5, or
-`python analysis/export_noisy.py` from any folder.
+`python unet/export_noisy.py` from any folder.
 
 Examples (in the Spyder console, after running this file once)
 --------
@@ -32,7 +32,7 @@ import pandas as pd
 import tifffile
 import yaml
 
-HERE = Path(__file__).parent          # this script's folder (analysis/)
+HERE = Path(__file__).parent          # this script's folder (unet/)
 ROOT = HERE.parent                    # the SimAFM-main folder
 sys.path.append(str(ROOT))            # so `from sim.utils import ...` works from any folder
 

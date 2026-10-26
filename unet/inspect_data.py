@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-analysis/inspect_data.py  (was tester.py)
+unet/inspect_data.py  (was tester.py)
 
 Quick visual check of one clean stack and its noisy versions: plots a few
 clean frames, then each noise level, and checks the added noise has the
 rms it should (residual std / sigma close to 1).
 
 Run: choose the settings below and press F5, or
-`python analysis/inspect_data.py` from any folder.
+`python unet/inspect_data.py` from any folder.
 
 @author: lukethomas
 """
@@ -20,7 +20,7 @@ import numpy as np
 import tifffile
 import yaml
 
-HERE = Path(__file__).parent          # this script's folder (analysis/)
+HERE = Path(__file__).parent          # this script's folder (unet/)
 ROOT = HERE.parent                    # the SimAFM-main folder
 sys.path.append(str(ROOT))            # so `from sim.utils import ...` works from any folder
 

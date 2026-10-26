@@ -11,7 +11,7 @@ Run: F5 in Spyder, or `python unet/train.py` from any folder.
 Edit the CONFIG block below to change the split, model size etc.
 
 This script trains and evaluates only; it makes NO figures. All plots are
-made afterwards by analysis/make_figures.py from the files saved here, so
+made afterwards by unet/make_figures.py from the files saved here, so
 you can restyle figures without retraining.
 
 Outputs (in results/<run_name>/):
@@ -240,7 +240,7 @@ def main(cfg=CONFIG, data_root=DATA_ROOT):
     # ---- Training loop ----
     # history gets one row per validation check and is saved to history.csv
     # every time, so the loss curve can be plotted (even mid-training) by
-    # analysis/make_figures.py without retraining
+    # unet/make_figures.py without retraining
     history = []
     best_val = np.inf
     t0 = time.time()

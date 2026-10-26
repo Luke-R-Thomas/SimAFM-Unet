@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-analysis/make_figures.py
+unet/make_figures.py
 
 Makes every dissertation figure for one training run, from the files that
 unet/train.py saved in results/<run>/ plus the clean stacks it used. It
@@ -22,7 +22,7 @@ Figures (written to results/<run>/figures/ as PDF and 300 dpi PNG):
 5. improvement_heatmap % improvement of the U-Net over the Gaussian
 
 Run: set RUN_NAME below and press F5, or
-`python analysis/make_figures.py` from any folder.
+`python unet/make_figures.py` from any folder.
 
 To redo just one figure after F5 (in the Spyder console):
     data = load_run(RUN_NAME)
@@ -43,7 +43,7 @@ from matplotlib.ticker import MaxNLocator
 import torch
 import yaml
 
-HERE = Path(__file__).parent          # this script's folder (analysis/)
+HERE = Path(__file__).parent          # this script's folder (unet/)
 ROOT = HERE.parent                    # the SimAFM-main folder
 sys.path.append(str(ROOT))            # so `from unet.model import ...` works from any folder
 

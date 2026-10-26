@@ -18,7 +18,7 @@ jitter, so a frame-level split would put near copies of training images in
 the test set.
 
 This file only holds functions; it is imported by train.py and
-analysis/make_figures.py (which put the SimAFM-main folder on the path
+make_figures.py (which put the SimAFM-main folder on the path
 first, so `from sim.utils import ...` below can be found).
 
 @author: lukethomas

@@ -3,7 +3,7 @@
 """
 sim/utils.py  (was tools.py)
 
-Small helpers shared by the simulation, the U-Net and the analysis scripts:
+Small helpers shared by the simulation, the U-Net and the plotting scripts:
 - clean_name, noise_name : the filenames for each stack, e.g.
                            6j6j_tr05_ca10_tilt30_exact(_n05)
 - name_seed              : turns a filename into a fixed random seed
